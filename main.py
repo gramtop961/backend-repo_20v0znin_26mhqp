@@ -1,6 +1,9 @@
 import os
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import ValidationError
+from schemas import Lead
+from database import create_document
 
 app = FastAPI()
 
@@ -63,6 +66,17 @@ def test_database():
     response["database_name"] = "✅ Set" if os.getenv("DATABASE_NAME") else "❌ Not Set"
     
     return response
+
+@app.post("/leads")
+def create_lead(lead: Lead):
+    """Collect leads from landing page form and store in MongoDB"""
+    try:
+        doc_id = create_document("lead", lead)
+        return {"ok": True, "id": doc_id}
+    except ValidationError as ve:
+        raise HTTPException(status_code=422, detail=str(ve))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 if __name__ == "__main__":
